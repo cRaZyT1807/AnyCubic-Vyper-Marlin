@@ -37,8 +37,6 @@ L64XX_Marlin L64xxManager;
 #include "../../module/planner.h"
 #include "../../HAL/shared/Delay.h"
 
-void echo_yes_no(const bool yes) { serialprintPGM(yes ? PSTR(" YES") : PSTR(" NO ")); }
-
 static const char str_X[] PROGMEM = "X ",  str_Y[] PROGMEM = "Y ",  str_Z[] PROGMEM = "Z ",
                  str_X2[] PROGMEM = "X2", str_Y2[] PROGMEM = "Y2",
                  str_Z2[] PROGMEM = "Z2", str_Z3[] PROGMEM = "Z3", str_Z4[] PROGMEM = "Z4",
@@ -55,6 +53,8 @@ PGM_P const L64XX_Marlin::index_to_axis[] PROGMEM = {
 
 #define DEBUG_OUT ENABLED(L6470_CHITCHAT)
 #include "../../core/debug_out.h"
+
+void echo_yes_no(const bool yes) { DEBUG_ECHOPGM_P(yes ? PSTR(" YES") : PSTR(" NO ")); UNUSED(yes); }
 
 uint8_t L64XX_Marlin::dir_commands[MAX_L64XX];  // array to hold direction command for each driver
 
@@ -368,14 +368,14 @@ void L64XX_Marlin::set_param(const L64XX_axis_t axis, const uint8_t param, const
   }
 }
 
-inline void echo_min_max(const char a, const float &min, const float &max) {
+inline void echo_min_max(const char a, const_float_t min, const_float_t max) {
   DEBUG_CHAR(' '); DEBUG_CHAR(a);
   DEBUG_ECHOPAIR(" min = ", min);
   DEBUG_ECHOLNPAIR("  max = ", max);
 }
-inline void echo_oct_used(const float &oct, const uint8_t stall) {
+inline void echo_oct_used(const_float_t oct, const uint8_t stall) {
   DEBUG_ECHOPAIR("over_current_threshold used     : ", oct);
-  serialprintPGM(stall ? PSTR("  (Stall") : PSTR("  (OCD"));
+  DEBUG_ECHOPGM_P(stall ? PSTR("  (Stall") : PSTR("  (OCD"));
   DEBUG_ECHOLNPGM(" threshold)");
 }
 inline void err_out_of_bounds() { DEBUG_ECHOLNPGM("Test aborted - motion out of bounds"); }
@@ -395,7 +395,7 @@ uint8_t L64XX_Marlin::get_user_input(uint8_t &driver_count, L64XX_axis_t axis_in
   }
 
   uint8_t found_displacement = false;
-  LOOP_XYZE(i) if (uint16_t _displacement = parser.intval(axis_codes[i])) {
+  LOOP_LOGICAL_AXES(i) if (uint16_t _displacement = parser.intval(axis_codes[i])) {
     found_displacement = true;
     displacement = _displacement;
     uint8_t axis_offset = parser.byteval('J');
@@ -445,14 +445,7 @@ uint8_t L64XX_Marlin::get_user_input(uint8_t &driver_count, L64XX_axis_t axis_in
       position_min = X_center - displacement;
       position_max = X_center + displacement;
       echo_min_max('X', position_min, position_max);
-      if (false
-        #ifdef X_MIN_POS
-          || position_min < (X_MIN_POS)
-        #endif
-        #ifdef X_MAX_POS
-          || position_max > (X_MAX_POS)
-        #endif
-      ) {
+      if (TERN0(HAS_ENDSTOPS, position_min < (X_MIN_POS) || position_max > (X_MAX_POS))) {
         err_out_of_bounds();
         return true;
       }
@@ -462,14 +455,7 @@ uint8_t L64XX_Marlin::get_user_input(uint8_t &driver_count, L64XX_axis_t axis_in
       position_min = Y_center - displacement;
       position_max = Y_center + displacement;
       echo_min_max('Y', position_min, position_max);
-      if (false
-        #ifdef Y_MIN_POS
-          || position_min < (Y_MIN_POS)
-        #endif
-        #ifdef Y_MAX_POS
-          || position_max > (Y_MAX_POS)
-        #endif
-      ) {
+      if (TERN0(HAS_ENDSTOPS, position_min < (Y_MIN_POS) || position_max > (Y_MAX_POS))) {
         err_out_of_bounds();
         return true;
       }
@@ -479,14 +465,7 @@ uint8_t L64XX_Marlin::get_user_input(uint8_t &driver_count, L64XX_axis_t axis_in
       position_min = Z_center - displacement;
       position_max = Z_center + displacement;
       echo_min_max('Z', position_min, position_max);
-      if (false
-        #ifdef Z_MIN_POS
-          || position_min < (Z_MIN_POS)
-        #endif
-        #ifdef Z_MAX_POS
-          || position_max > (Z_MAX_POS)
-        #endif
-      ) {
+      if (TERN0(HAS_ENDSTOPS, position_min < (Z_MIN_POS) || position_max > (Z_MAX_POS))) {
         err_out_of_bounds();
         return true;
       }
@@ -658,7 +637,7 @@ void L64XX_Marlin::say_axis(const L64XX_axis_t axis, const uint8_t label/*=true*
   ) {
     say_axis(axis);
     DEBUG_ECHOPGM("  THERMAL: ");
-    serialprintPGM((status & _status_axis_th_sd) ? PSTR("SHUTDOWN") : (status & _status_axis_th_wrn) ? PSTR("WARNING ") : PSTR("OK      "));
+    DEBUG_ECHOPGM_P((status & _status_axis_th_sd) ? PSTR("SHUTDOWN") : (status & _status_axis_th_wrn) ? PSTR("WARNING ") : PSTR("OK      "));
     DEBUG_ECHOPGM("   OVERCURRENT: ");
     echo_yes_no((status & _status_axis_ocd) != 0);
     if (!(_status_axis_layout == L6474_STATUS_LAYOUT)) {  // L6474 doesn't have these bits

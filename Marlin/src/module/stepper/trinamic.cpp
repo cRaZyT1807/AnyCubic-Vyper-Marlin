@@ -62,7 +62,7 @@ enum StealthIndex : uint8_t { STEALTH_AXIS_XY, STEALTH_AXIS_Z, STEALTH_AXIS_E };
 #define _TMC_UART_DEFINE(SWHW, IC, ST, AI) TMC_UART_##SWHW##_DEFINE(IC, ST, TMC_##ST##_LABEL, AI)
 #define TMC_UART_DEFINE(SWHW, ST, AI) _TMC_UART_DEFINE(SWHW, ST##_DRIVER_TYPE, ST, AI##_AXIS)
 
-#if DISTINCT_E > 1
+#if ENABLED(DISTINCT_E_FACTORS)
   #define TMC_SPI_DEFINE_E(AI) TMC_SPI_DEFINE(E##AI, E##AI)
   #define TMC_UART_DEFINE_E(SWHW, AI) TMC_UART_DEFINE(SWHW, E##AI, E##AI)
 #else
@@ -830,11 +830,11 @@ void reset_trinamic_drivers() {
   }
 
   constexpr bool sc_hw_done(size_t start, size_t end) { return start == end; }
-  constexpr bool sc_hw_skip(const char* port_name) { return !(*port_name); }
-  constexpr bool sc_hw_match(const char* port_name, uint32_t address, size_t start, size_t end) {
+  constexpr bool sc_hw_skip(const char *port_name) { return !(*port_name); }
+  constexpr bool sc_hw_match(const char *port_name, uint32_t address, size_t start, size_t end) {
     return !sc_hw_done(start, end) && !sc_hw_skip(port_name) && (address == sanity_tmc_hw_details[start].address && str_eq_ce(port_name, sanity_tmc_hw_details[start].port));
   }
-  constexpr int count_tmc_hw_serial_matches(const char* port_name, uint32_t address, size_t start, size_t end) {
+  constexpr int count_tmc_hw_serial_matches(const char *port_name, uint32_t address, size_t start, size_t end) {
     return sc_hw_done(start, end) ? 0 : ((sc_hw_skip(port_name) ? 0 : (sc_hw_match(port_name, address, start, end) ? 1 : 0)) + count_tmc_hw_serial_matches(port_name, address, start + 1, end));
   }
 
